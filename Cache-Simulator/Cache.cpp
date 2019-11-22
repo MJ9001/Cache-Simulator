@@ -2,13 +2,13 @@
 #include "stdlib.h"
 #include <math.h> 
 
-Cache::Cache(std::string filename_, uint32_t wordcount_, uint32_t blockcount_, uint32_t associativity_, uint32_t wordsper_, bool useFIFO_) :
-	filename(filename_), wordcount(wordcount_), useFIFO(useFIFO_), blockcount(blockcount_), associativity(associativity_), wordsper(wordsper_) {
+Cache::Cache(std::string filename_, uint32_t wordcount_, uint32_t blockcount_, uint32_t associativity_, bool useFIFO_) :
+	filename(filename_), wordcount(wordcount_), useFIFO(useFIFO_), blockcount(blockcount_), associativity(associativity_) {
 };
 Cache::~Cache(){}
 void Cache::Run()
 {
-	printf("Sorting mode: %s\n", useFIFO ? "FIFO" : "LRU");
+	printf("Sorting mode: %s\n", useFIFO ? "RANDOM" : "LRU");
 	LoadFile();
 	Init();
 	Exec();
@@ -24,7 +24,6 @@ void Cache::Exec()
 		uint32_t toreplacei = 0;
 		uint32_t toreplacej = 0;
 		uint32_t toreplaceval = INT_MAX;
-		bool toreplacevalid = true;
 		uint32_t address = addresses.front();
 		addresses.pop_front();
 		uint32_t set = (address & setbitwise) >> offsetlen;
@@ -32,28 +31,32 @@ void Cache::Exec()
 
 		for (int i = 0; associativity > i && !hit; i++)
 		{
+			cacheWord* word = 0;
 			//uint32_t offset = address & offsetbitwise;
 			for (int j = 0; wordcount > j; j++)
 			{
-				int movement = (set << (int)log2f(associativity)) + i;
-				cacheWord *word = &cacheMem.at(movement)[j];
+				int movement = (set << (int)log2(associativity)) + i;
+				word = &cacheMem.at(movement)[j];
 				if (word->valid && (word->tag == tag))
 				{
 					hit = true;
 					break;
 						word->insertedtick = cycles;
 				}
-				if ((toreplaceval > word->insertedtick) && toreplacevalid)
+				if ((toreplaceval > word->insertedtick) || !word->valid)
 				{
 					toreplaceval = word->insertedtick;
 					toreplacei = i;
 					toreplacej = j;
-					if(useFIFO)
-						toreplacej = rand() % wordcount;
-					toreplacevalid = word->valid;
+					//if(useFIFO)
+					//	toreplacej = rand() % wordcount;
+					if(!word->valid)
+						break;
 				}
 			}
 			cycles++;
+			if (!word->valid)
+				break;
 		}
 		printf("address: %08x (%s)\n", address, hit ? "hit" : "miss");
 		if (hit)
@@ -78,11 +81,11 @@ void Cache::Init()
 		cacheMem.push_back(block);
 		for (int j = 0; wordcount > j; j++)
 		{
-			block[j] = cacheWord{ false, 0 };
+			block[j] = cacheWord{ false, 0, 0 };
 		}
 	}
-	setlen = (int)(log2f(blockcount)) - (int)log2f(associativity);
-	offsetlen = 0;
+	offsetlen = (int)log2(wordcount);
+	setlen = (int)(log2(blockcount)) - (int)log2(associativity);
 	taglen = 32 - offsetlen - setlen;
 
 	for (int i = 0; offsetlen > i; i++)

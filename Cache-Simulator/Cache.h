@@ -11,7 +11,7 @@ class Cache
 	};
 
 public:
-	Cache(std::string filename_, uint32_t wordcount_, uint32_t blockcount_, uint32_t associativity_, uint32_t wordsper_,bool useFIFO_);
+	Cache(std::string filename_, uint32_t wordcount_, uint32_t blockcount_, uint32_t associativity_,bool useFIFO_);
 	~Cache();
 	void Run();
 private:
@@ -19,7 +19,6 @@ private:
 	std::list<uint32_t> addresses;
 	std::string filename;
 	uint32_t wordcount = 0;
-	uint32_t wordsper = 0;
 	uint32_t taglen = 0;
 	uint32_t associativity = 0;
 	uint32_t tagbitwise = 0;
